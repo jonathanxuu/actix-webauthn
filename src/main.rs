@@ -4,14 +4,14 @@ use std::path::PathBuf;
 
 use helpers::cal_roothash::restore_roothash;
 
+use actix_web::cookie::Key;
 use actix_web::middleware::Logger;
+use actix_web::web::{get, post, JsonConfig};
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use env_logger::Env;
+use helpers::startup::startup;
 use miden_vm::VMResult;
 use serde::{Deserialize, Serialize};
-use actix_web::web::{get, post, JsonConfig};
-use actix_web::cookie::Key;
-use helpers::startup::startup;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Req {
@@ -28,7 +28,6 @@ pub struct Resp {
 }
 
 type WebResult<T> = Result<T, Error>;
-
 
 // ============================= Implement webauthn-rs ===========================
 
@@ -87,9 +86,8 @@ pub(crate) async fn start_register(
     session: Session,
     webauthn_users: Data<Mutex<UserData>>,
     webauthn: Data<Webauthn>,
-// ) -> impl Responder {
+    // ) -> impl Responder {
 ) -> WebResult<Json<CreationChallengeResponse>> {
-
     info!("Start register");
 
     // We get the username from the URL, but you could get this via form submission or
@@ -154,7 +152,7 @@ pub(crate) async fn finish_register(
     session: Session,
     webauthn_users: Data<Mutex<UserData>>,
     webauthn: Data<Webauthn>,
-// ) -> impl Responder {
+    // ) -> impl Responder {
 ) -> WebResult<HttpResponse> {
     let (username, user_unique_id, reg_state) = match session.get("reg_state")? {
         Some((username, user_unique_id, reg_state)) => (username, user_unique_id, reg_state),
@@ -219,7 +217,7 @@ pub(crate) async fn start_authentication(
     session: Session,
     webauthn_users: Data<Mutex<UserData>>,
     webauthn: Data<Webauthn>,
-// ) -> impl Responder {
+    // ) -> impl Responder {
 ) -> WebResult<Json<RequestChallengeResponse>> {
     info!("Start Authentication");
     // We get the username from the URL, but you could get this via form submission or
@@ -236,19 +234,22 @@ pub(crate) async fn start_authentication(
         .name_to_id
         .get(username.as_str())
         .copied()
-        .ok_or(Error::UserNotFound).unwrap();
+        .ok_or(Error::UserNotFound)
+        .unwrap();
 
     let allow_credentials = users_guard
         .keys
         .get(&user_unique_id)
-        .ok_or(Error::UserHasNoCredentials).unwrap();
+        .ok_or(Error::UserHasNoCredentials)
+        .unwrap();
 
     let (rcr, auth_state) = webauthn
         .start_passkey_authentication(allow_credentials)
         .map_err(|e| {
             info!("challenge_authenticate -> {:?}", e);
             Error::Unknown(e)
-        }).unwrap();
+        })
+        .unwrap();
 
     // Drop the mutex to allow the mut borrows below to proceed
     drop(users_guard);
@@ -256,7 +257,9 @@ pub(crate) async fn start_authentication(
     // Note that due to the session store in use being a server side memory store, this is
     // safe to store the auth_state into the session since it is not client controlled and
     // not open to replay attacks. If this was a cookie store, this would be UNSAFE.
-    session.insert("auth_state", (user_unique_id, auth_state)).unwrap();
+    session
+        .insert("auth_state", (user_unique_id, auth_state))
+        .unwrap();
 
     Ok(Json(rcr))
 }
@@ -270,9 +273,13 @@ pub(crate) async fn finish_authentication(
     session: Session,
     webauthn_users: Data<Mutex<UserData>>,
     webauthn: Data<Webauthn>,
-// ) -> impl Responder {
+    // ) -> impl Responder {
 ) -> WebResult<HttpResponse> {
-    let (user_unique_id, auth_state) = session.get("auth_state").unwrap().ok_or(Error::CorruptSession).unwrap();
+    let (user_unique_id, auth_state) = session
+        .get("auth_state")
+        .unwrap()
+        .ok_or(Error::CorruptSession)
+        .unwrap();
 
     session.remove("auth_state");
 
@@ -281,7 +288,8 @@ pub(crate) async fn finish_authentication(
         .map_err(|e| {
             info!("challenge_register -> {:?}", e);
             Error::BadRequest(e)
-        }).unwrap();
+        })
+        .unwrap();
 
     let mut users_guard = webauthn_users.lock().await;
 
@@ -297,15 +305,14 @@ pub(crate) async fn finish_authentication(
                 sk.update_credential(&auth_result);
             })
         })
-        .ok_or(Error::UserHasNoCredentials).unwrap();
+        .ok_or(Error::UserHasNoCredentials)
+        .unwrap();
 
     info!("Authentication Successful!");
     Ok(HttpResponse::Ok().finish())
 }
 
-
 // ============================= Finish Implement webauthn-rs ===========================
-
 
 #[post("verify")]
 async fn verify(req: web::Json<Req>) -> impl Responder {
@@ -367,7 +374,6 @@ async fn echo() -> impl Responder {
 //     .run()
 //     .await
 // }
-
 
 #[actix_web::main]
 async fn main() {
