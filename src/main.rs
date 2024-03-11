@@ -397,7 +397,7 @@ async fn main() {
     // }
 
     // Build the webserver and run it
-    info!("Listening on: http://0.0.0.0:8080");
+    info!("Listening on: http://0.0.0.0:3000");
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -418,8 +418,8 @@ async fn main() {
             .route("/login_start/{username}", post().to(start_authentication))
             .route("/login_finish", post().to(finish_authentication))
     })
-    .bind(("0.0.0.0", 8080))
-    .expect("Failed to start a listener on 0.0.0.0:8080")
+    .bind(("0.0.0.0", 3000))
+    .expect("Failed to start a listener on 0.0.0.0:3000")
     .run()
     .await
     .unwrap();
