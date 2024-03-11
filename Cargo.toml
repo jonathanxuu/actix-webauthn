@@ -1,0 +1,52 @@
+[package]
+name = "actix"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4"
+env_logger = "0.10.0"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# todo: update the dependency of miden (with the version `0.5`)
+
+miden-vm = {git = "https://github.com/jonathanxuu/miden.git", branch = "dev", default-features = false}
+
+# miden-vm = {git = "https://github.com/zCloak-Network/miden.git", branch = "dev", default-features = false}
+hex = { version = "0.4", default-features = false, optional = true }
+sha3 = "0.10.6"
+# winter-utils = { package = "winter-utils", version = "0.6", default-features = false }
+# miden-crypto = { package = "miden-crypto", version = "0.2", default-features = false }
+
+tracing = "0.1"
+tracing-subscriber = "0.3"
+rand = {version="0.8", features=["min_const_gen"]}
+webauthn-rs = { path = "./webauthn-rs", features = ["danger-allow-state-serialisation"] }
+
+actix-session = { version = "~0.7", features = ["cookie-session"] }
+async-trait = { version = "~0.1" }
+anyhow = { version = "~1.0" }
+chrono = { version = "~0.4" }
+once_cell = { version = "~1.17" }
+actix-files = { version = "~0.6" }
+
+tokio = { version = "1.22.0", features = [
+    "sync",
+    "test-util",
+    "macros",
+    "net",
+    "rt-multi-thread",
+    "time",
+] }
+
+
+
+
+
+[features]
+default = ["std"]
+std = [ "hex/std", "miden-vm/std"]
